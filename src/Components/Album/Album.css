@@ -1,0 +1,24 @@
+.loader-album {
+    border: 11px solid #f3f3f3;
+    border-radius: 50%;
+    border-top: 5px solid #3498db;
+    width: 50px;
+    height: 50px;
+    -webkit-animation: spin-album 1.5s linear infinite;
+    animation: spin-album 1.5s linear infinite;
+    margin-right: auto;
+    margin-left: auto;
+    margin-top: 10px;
+    margin-bottom: 10px;
+  }
+  
+  /* Safari */
+  @-webkit-keyframes spin-album {
+    0% { -webkit-transform: rotate(0deg); }
+    100% { -webkit-transform: rotate(360deg); }
+  }
+  
+  @keyframes spin-album {
+    0% { transform: rotate(0deg); } 
+    100% { transform: rotate(360deg); }
+  }

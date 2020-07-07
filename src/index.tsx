@@ -20,7 +20,6 @@ ReactDOM.render(
                 <Route exact path='/' component={Home} />
                 <Route exact path='/album/:id' component={Album} />
             </Switch>
-            <Footer />
         </BrowserRouter>
         </Suspense>
     </React.StrictMode>,

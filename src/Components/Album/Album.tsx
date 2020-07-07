@@ -1,18 +1,8 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef, createRef } from 'react'
 import './Album.css'
-
-const HashTable = require('hashtable')
-
-interface PhotoType {
-    url: string,
-    name: string,
-    tags: Array<string>,
-    index: number,
-    size: {
-        x: number,
-        y: number,
-    }
-}
+import { Redirect, useHistory } from 'react-router-dom'
+import RowPhotos from './RowPhotos'
+import PhotoViewr from './PhotoViewer'
 
 interface Album {
     data: {
@@ -94,48 +84,91 @@ interface Album {
     }>
 }
 
-const album : Album = require('./album.json')
-
-const AlbumPhotosRow = (photos : Array<PhotoType>, countPhotos : number) => {
-    return (
-        <div className='album-photos-row'>
-            
-        </div>
-    )
+interface HashTable<T> {
+    [key: string] : T
 }
 
-const baseCountPhotos = 10
-const domain = '/'
+export interface includedPtoto {
+    small: {
+        id: string,
+        width: number,
+        height: number,
+    },
+    medium: {
+        id: string,
+        width: number,
+        height: number,
+    },
+    large: {
+        id: string,
+        width: number,
+        height: number,
+    },
+}
 
-const Album = () => {
+const album : Album = require('./album.json')
+
+const baseCountPhotos = 6
+const countPhotosInRow = 3
+const domain = 'https://media.itmo.ru/photos/'
+
+const Album = (props : any) => {
+    console.log(props.location.hash)
+
     let [countPhotos, setCountPhotos] = useState(baseCountPhotos)
+    let [escape, setEscape] = useState(false)
 
-    useEffect(() => {
-        const handleWindowMouseMove = (event : any) => {
-            let scrollTop = document.documentElement.scrollTop;
-            let t1 = document.getElementById('album-page-load-photos')?.offsetTop
-            let t3 = window.innerHeight
-            if(scrollTop !== undefined && t1 !== undefined ) {
-                if(scrollTop + t3 >= t1) {
-                        //console.log('start', new Date().getTime())
-                        window.removeEventListener('scroll', handleWindowMouseMove);
-                        setCountPhotos(countPhotos + baseCountPhotos)
-                        //console.log(albums.length)
-                }
+    let refs : Array<React.RefObject<any>> = []
+
+    const handleWindowMouseMove = (event? : any) => {
+        let scrollTop = document.documentElement.scrollTop;
+        let t1 = document.getElementById('album-page-load-photos')?.offsetTop
+        let t3 = window.innerHeight
+        if(scrollTop !== undefined && t1 !== undefined ) {
+            if(scrollTop + t3 >= t1) {
+                window.removeEventListener('scroll', handleWindowMouseMove);
+                let maxLength = album.data.relationships.photos.data.length
+                setCountPhotos(Math.min(countPhotos + baseCountPhotos, maxLength))
             }
         }
+    }
+
+    let isVisiblePhotoView = false
+
+    useEffect(() => {
         window.addEventListener('scroll', handleWindowMouseMove)
-        return () => window.removeEventListener('scroll', handleWindowMouseMove);
+        return () => {
+            window.removeEventListener('scroll', handleWindowMouseMove);
+        }
     })
 
-    let albumHashIncluded = new HashTable<string, {
-        small: {id: string, width: number, height: number}, 
-        medium: {id: string, width: number, height: number}, 
-        large: {id: string, width: number, height: number},
-    }>()
+    let photoIndex = -1;
+
+    if(props.location.hash.indexOf('photoview-') !== -1 ) {
+        document.body.style.overflow = 'hidden'
+        photoIndex = parseInt(props.location.hash.split('-')[1], 10)
+        if(isNaN(photoIndex) || photoIndex >= album.data.relationships.photos.data.length) {
+            return <Redirect to={props.location.pathname}/>
+        } else {
+            isVisiblePhotoView = true
+        }
+    } else {
+        document.body.style.overflow = 'auto'
+    }
+
+    if(escape && props.location.hash === '') {
+        setEscape(false)
+    }
+
+    if(escape) {
+        console.log('redirect')
+        return <Redirect to={props.location.pathname}/>
+    }
+
+    let albumHashIncluded : HashTable<includedPtoto> = {}
 
     album.included.forEach(item => {
-        albumHashIncluded.put(item.id, {
+        albumHashIncluded[`${item.id}`] = {
             small: {
                 id: item.attributes.data.derivatives.small.id,
                 width: item.attributes.data.derivatives.small.metadata.width,
@@ -151,16 +184,44 @@ const Album = () => {
                 width: item.attributes.data.derivatives.large.metadata.width,
                 height: item.attributes.data.derivatives.large.metadata.height,
             },
-        })
+        }
     })
 
-    console.log(albumHashIncluded)
 
-    const rows = []
-    const row = []
+    let row : Array<includedPtoto> = []
+    let rows : Array<JSX.Element> = []
+
+    let photos : Array<includedPtoto> = []
+
+    console.log(countPhotos)
+    album.data.relationships.photos.data.slice(0, countPhotos).forEach((photo, ind) => {
+        let item = albumHashIncluded[photo.id]
+        console.log(item)
+        if(item) {
+            row.push(item)
+            refs.push(createRef())
+            photos.push(item)
+        }
+        if(row.length === countPhotosInRow || album.data.relationships.photos.data.slice(0, countPhotos).length - 1 === ind) {
+            let count = row.length
+            rows.push(
+                <RowPhotos row={row} refs={refs} ind={ind} count={count} domain={domain}/>
+            )
+            row = []
+        }
+    })
+
+    console.log(isVisiblePhotoView)
+
+    let count = album.data.relationships.photos.data.length
+
+    if(isVisiblePhotoView && photoIndex === countPhotos  - 1 && countPhotos !== count) {
+        let maxLength = album.data.relationships.photos.data.length
+        setCountPhotos(Math.min(countPhotos + baseCountPhotos, maxLength))
+    }
 
     return (
-        <div className='album-block'>
+        <div className={'album-block'}>
             <div className='album-header'>
                 <h1>{album.data.attributes.name}</h1>
                 <div className='album-header-block'>
@@ -173,10 +234,15 @@ const Album = () => {
                     </div>
                 </div>
             </div>
+            
             <div className='albums-photos-block'>
-                
+                {rows.map(Row => Row)}
             </div>
-            <div id='album-page-load-photos' className='loader-album' />
+            {countPhotos < count ? <div id='album-page-load-photos' className='loader-album' /> : null}
+            {isVisiblePhotoView ? 
+                <PhotoViewr photos={photos} photoIndex={photoIndex} refs={refs} count={count} location={props.location} />
+                : null
+            }
         </div>
     )
 }

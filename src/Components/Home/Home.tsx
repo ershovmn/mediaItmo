@@ -1,6 +1,6 @@
-import React, { useEffect, useState, Suspense } from 'react'
+import React, { useEffect, useState } from 'react'
 import './Home.css'
-import { render } from '@testing-library/react'
+import { Link } from 'react-router-dom'
 
 let albums1 = [
     {name: 'ОТКРЫТЫЙ ЧЕМПИОНАТ ИТМО ПО НАСТОЛЬНОМУ ТЕННИСУ (3 ТУР)', date: '14 марта 2020', photo: 'https://media.itmo.ru/images/Album/1968/album/big/p1968.jpg', id: 0},
@@ -18,7 +18,6 @@ let albums1 = [
 
 const Home = () => {
     let [albums, setAlbums] = useState(albums1)
-    let [countAlbums, setCountAlbums] = useState(0)
 
     useEffect(() => {
         const handleWindowMouseMove = (event : any) => {
@@ -48,13 +47,13 @@ const Home = () => {
         if(array.length === 3) {
             albumsElements.push (
                     <div className='homeAlbumsBlock'>
-                        {array.map(item => <a className='homeAlbumBlock'  href={item.photo} download>
+                        {array.map(item => <Link className='homeAlbumBlock'  to={`/album/${album.id}`}>
                             <div style={{width: '100%', overflow: 'hidden'}}>
                                 <img src={item.photo} data-src={item.photo} alt={item.name} width='100%' />
                             </div>
                             <div className='homeAlbumOpacity' />
                             <div style={{overflow: 'hidden', position: 'absolute', top: '0px', left: '0px', fontWeight: 'bold', color: 'white'}}>{item.name}</div>
-                        </a>)}
+                        </Link>)}
                     </div>
             )
             lastCount = 2 + (lastCount - 1) % 2
